@@ -32,4 +32,13 @@ The program writes `/output/entry.png` by default. Set `MAKEFUN_OUTPUT_DIR` to o
 MAKEFUN_OUTPUT_DIR=/tmp/globe-out node main.ts
 ```
 
-`main.ts` checks the eight-byte PNG signature, the IHDR dimensions (1024×1024), and the 1 MiB size limit (1,048,576 bytes). It creates the destination directory, copies the image, reads it back to verify the byte length, and logs the size and dimensions.
+## What the program guarantees
+
+A successful run verifies all four conditions.
+
+- The source starts with the exact eight-byte PNG signature.
+- The source IHDR reports dimensions of exactly 1024×1024 pixels.
+- The source is at most 1 MiB (1,048,576 bytes).
+- The output read back from disk is byte-for-byte identical to the source.
+
+Each successful run prints the verified image's byte length, dimensions, and SHA-256 digest in hexadecimal.

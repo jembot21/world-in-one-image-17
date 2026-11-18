@@ -5,6 +5,7 @@
  * the PNG header, dimensions, and size so invalid or oversized entries
  * fail explicitly.
  */
+import { createHash } from 'node:crypto';
 import { copyFile, mkdir, readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -42,8 +43,9 @@ if (sourceBytes.length > maxBytes) {
 await mkdir(outputDirectory, { recursive: true });
 await copyFile(sourceImage, outputImage);
 const writtenImage = await readFile(outputImage);
-if (writtenImage.length !== sourceBytes.length) {
-  throw new Error(`Output size mismatch: expected ${sourceBytes.length} bytes, got ${writtenImage.length}.`);
+if (!writtenImage.equals(sourceBytes)) {
+  throw new Error('Output verification failed: the copied image differs from the source.');
 }
 
-console.log(`Wrote entry.png (${writtenImage.length} bytes, ${width}×${height})`);
+const digest = createHash('sha256').update(writtenImage).digest('hex');
+console.log(`Wrote entry.png (${writtenImage.length} bytes, ${width}×${height}), SHA-256 ${digest}`);
