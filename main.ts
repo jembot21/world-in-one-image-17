@@ -1,8 +1,9 @@
 /**
- * Copies the finished newspaper image summarizing the world news of
- * Tuesday 17 November 2026 to the make.fun output directory, then reads
- * the written image back and prints its byte length. Uses Node 22's
- * standard library only and makes no network requests.
+ * The Daily Globe is an entry for make.fun's news-image-20261117 bounty.
+ * This program ships the finished 1024×1024 front page summing up
+ * Tuesday 17 November 2026. Before copying it, the program validates
+ * the PNG header, dimensions, and size so invalid or oversized entries
+ * fail explicitly.
  */
 import { copyFile, mkdir, readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
@@ -19,7 +20,30 @@ if (!sourceBytes.subarray(0, pngSignature.length).equals(pngSignature)) {
   throw new Error(`Invalid PNG signature: source image ${sourceImage} must start with the 8-byte PNG signature.`);
 }
 
+if (
+  sourceBytes.length < 33 ||
+  sourceBytes.readUInt32BE(8) !== 13 ||
+  sourceBytes.toString('ascii', 12, 16) !== 'IHDR'
+) {
+  throw new Error(`Invalid PNG header: ${sourceImage} must have a complete IHDR chunk.`);
+}
+
+const width = sourceBytes.readUInt32BE(16);
+const height = sourceBytes.readUInt32BE(20);
+if (width !== 1024 || height !== 1024) {
+  throw new Error(`Invalid PNG dimensions: expected 1024×1024, got ${width}×${height}.`);
+}
+
+const maxBytes = 1_048_576;
+if (sourceBytes.length > maxBytes) {
+  throw new Error(`PNG exceeds the ${maxBytes}-byte limit: got ${sourceBytes.length} bytes.`);
+}
+
 await mkdir(outputDirectory, { recursive: true });
 await copyFile(sourceImage, outputImage);
 const writtenImage = await readFile(outputImage);
-console.log(`Wrote entry.png: ${writtenImage.length} bytes`);
+if (writtenImage.length !== sourceBytes.length) {
+  throw new Error(`Output size mismatch: expected ${sourceBytes.length} bytes, got ${writtenImage.length}.`);
+}
+
+console.log(`Wrote entry.png (${writtenImage.length} bytes, ${width}×${height})`);
